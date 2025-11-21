@@ -13,26 +13,28 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset().select_related('client')
         user = self.request.user
-        if not user.is_superuser:
-            company = getattr(self.request, 'company', None)
-            if not company:
-                return Assessment.objects.none()
-            return qs.filter(client__company=company)
-        # Optional filter for superusers
-        company_id = self.request.query_params.get('company')
-        if company_id:
-            return qs.filter(client__company_id=company_id)
-        return qs
+        
+        # Admin and compliance can see all assessments
+        if user.role in ['admin', 'compliance']:
+            return qs
+        
+        # Regular users can only see assessments for clients from their distribution channel
+        if user.distribution_channel:
+            return qs.filter(client__distributionChannel=user.distribution_channel)
+        
+        # If no distribution channel set, return empty queryset
+        return Assessment.objects.none()
 
     def perform_create(self, serializer):
         # Automatically associate the authenticated user as the submitter
         client = serializer.validated_data.get('client')
-        company = getattr(self.request, 'company', None)
         user = self.request.user
-        if not user.is_superuser:
-            if not company or not client or client.company_id != getattr(company, 'id', None):
-                # Prevent creating assessments for clients outside the selected company
-                raise ValidationError({'client': 'Client does not belong to the selected company'})
+        
+        # Regular users can only create assessments for clients in their distribution channel
+        if user.role not in ['admin', 'compliance']:
+            if not user.distribution_channel or not client or client.distributionChannel != user.distribution_channel:
+                raise ValidationError({'client': 'Client does not belong to your distribution channel'})
+        
         serializer.save(submitted_by=self.request.user)
 
     @action(detail=True, methods=["post"], url_path="push-external")

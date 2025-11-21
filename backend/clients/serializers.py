@@ -1,6 +1,10 @@
 from rest_framework import serializers
-from .models import Client
+from .models import Client, KycDocument
 
+class KycDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KycDocument
+        fields = ['id', 'client', 'uploaded_by', 'document', 'original_filename', 'upload_date']
 
 class ClientSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()

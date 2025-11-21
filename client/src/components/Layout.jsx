@@ -4,12 +4,12 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useCompany } from '@/contexts/CompanyContext';
+import { useDistributionChannel } from '@/contexts/DistributionChannelContext';
 import { LayoutDashboard, FileQuestion, Users, CheckSquare, FileText, LogOut, Shield, FolderKanban, ClipboardList } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
-  const { companies, selectedCompanyId, selectCompany } = useCompany();
+  const { channels, selectedChannelId, selectChannel } = useDistributionChannel();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -70,15 +70,15 @@ const Layout = ({ children }) => {
         <div>
           {user && (
             <div className="mb-3">
-              <label className="text-xs text-blue-200">Company</label>
+              <label className="text-xs text-blue-200">Distribution Channel</label>
               <select
                 className="mt-1 w-full p-2 rounded bg-white/20 text-white"
-                value={selectedCompanyId || ''}
-                onChange={(e) => selectCompany(e.target.value ? parseInt(e.target.value, 10) : null)}
+                value={selectedChannelId || ''}
+                onChange={(e) => selectChannel(e.target.value ? parseInt(e.target.value, 10) : null)}
               >
-                <option value="">Select company</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="">Select channel</option>
+                {channels.map((ch) => (
+                  <option key={ch.id} value={ch.id}>{ch.name} ({ch.channel_type_display || ch.channel_type})</option>
                 ))}
               </select>
             </div>

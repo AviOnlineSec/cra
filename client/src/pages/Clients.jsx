@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, User, Trash2, Edit, Play } from "lucide-react";
+import { Plus, User, Trash2, Edit, Play, Upload, FileText, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Helmet } from "react-helmet";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,15 +41,29 @@ const initialFormData = {
   phone: "",
   address: "",
   city: "",
-  
+  kycDocuments: [],
 };
 
 // ------------------------------
 // 🟩 Client Form
 // ------------------------------
-const ClientForm = ({ formData, setFormData, initialFormData }) => (
-  <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+const ClientForm = ({ formData, setFormData, initialFormData }) => {
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setFormData({ 
+      ...formData, 
+      kycDocuments: [...(formData.kycDocuments || []), ...files] 
+    });
+  };
+
+  const removeFile = (index) => {
+    const newFiles = formData.kycDocuments.filter((_, i) => i !== index);
+    setFormData({ ...formData, kycDocuments: newFiles });
+  };
+
+  return (
+    <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
         <Label>Client Type</Label>
         <Select
@@ -219,8 +233,71 @@ const ClientForm = ({ formData, setFormData, initialFormData }) => (
         />
       </div>
     </div>
+
+    <div className="pt-4 border-t">
+      <h3 className="font-semibold text-lg text-slate-700 mb-4">
+        KYC Documents (Optional)
+      </h3>
+      <div className="space-y-3">
+        <div>
+          <Label htmlFor="kyc-upload" className="cursor-pointer">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm text-gray-600 mb-1">
+                Click to upload or drag and drop
+              </p>
+              <p className="text-xs text-gray-500">
+                PDF, JPG, PNG, DOC, DOCX (Max 10MB per file)
+              </p>
+            </div>
+          </Label>
+          <Input
+            id="kyc-upload"
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+            className="hidden"
+          />
+        </div>
+
+        {formData.kycDocuments && formData.kycDocuments.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-700">
+              Selected Files ({formData.kycDocuments.length})
+            </p>
+            {formData.kycDocuments.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <FileText className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {(file.size / 1024).toFixed(2)} KB
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="ml-2 p-1 hover:bg-red-100 rounded-full transition-colors flex-shrink-0"
+                >
+                  <X className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   </div>
-);
+  );
+};
 
 const Clients = () => {
   const [clients, setClients] = useState([]);
@@ -252,24 +329,52 @@ const Clients = () => {
   }, [user]);
 
   // ------------------------------
-  // 🟩 Save new client
+  // 🟩 Save new client with KYC documents
   // ------------------------------
   const handleSave = async () => {
     try {
+      // First, create the client
       const res = await axiosInstance.post("/api/clients/", formData);
-      setClients([...clients, res.data]);
+      const newClient = res.data;
+
+      // Then upload KYC documents if any
+      if (formData.kycDocuments && formData.kycDocuments.length > 0) {
+        const uploadPromises = formData.kycDocuments.map(async (file) => {
+          const formDataUpload = new FormData();
+          formDataUpload.append('client', newClient.id);
+          formDataUpload.append('document', file);
+          
+          try {
+            await axiosInstance.post('/api/kyc-documents/', formDataUpload, {
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+          } catch (uploadErr) {
+            console.error('KYC upload error for file:', file.name, uploadErr);
+            // Don't fail the whole operation if one upload fails
+          }
+        });
+
+        await Promise.all(uploadPromises);
+      }
+
+      setClients([...clients, newClient]);
       setIsDialogOpen(false);
       setFormData(initialFormData);
 
+      const docCount = formData.kycDocuments?.length || 0;
       toast({
         title: "Success",
-        description: "Client added successfully.",
+        description: docCount > 0 
+          ? `Client added successfully with ${docCount} KYC document(s).`
+          : "Client added successfully.",
       });
     } catch (err) {
       console.error("Save client error:", err);
       toast({
         title: "Error",
-        description: "Failed to add client.",
+        description: err.response?.data?.detail || "Failed to add client.",
         variant: "destructive",
       });
     }

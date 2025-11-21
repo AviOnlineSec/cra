@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
-from .views import CompanyViewSet
+from .views import DistributionChannelViewSet
 
 router = DefaultRouter()
-router.register(r'companies', CompanyViewSet, basename='company')
+router.register(r'distribution-channels', DistributionChannelViewSet, basename='distribution-channel')
 
 urlpatterns = router.urls

@@ -1,16 +1,19 @@
 from rest_framework import serializers
-from .models import Company, CompanyMembership
+from .models import DistributionChannel, DistributionChannelMembership
 
 
-class CompanySerializer(serializers.ModelSerializer):
+class DistributionChannelSerializer(serializers.ModelSerializer):
+    channel_type_display = serializers.CharField(source='get_channel_type_display', read_only=True)
+    
     class Meta:
-        model = Company
-        fields = ["id", "name", "slug", "is_active", "created_at"]
+        model = DistributionChannel
+        fields = ["id", "name", "code", "channel_type", "channel_type_display", 
+                  "address", "phone", "email", "is_active", "created_at"]
 
 
-class CompanyMembershipSerializer(serializers.ModelSerializer):
-    company = CompanySerializer(read_only=True)
+class DistributionChannelMembershipSerializer(serializers.ModelSerializer):
+    channel = DistributionChannelSerializer(read_only=True)
 
     class Meta:
-        model = CompanyMembership
-        fields = ["id", "company", "role", "is_active", "created_at"]
+        model = DistributionChannelMembership
+        fields = ["id", "channel", "role", "is_active", "created_at"]

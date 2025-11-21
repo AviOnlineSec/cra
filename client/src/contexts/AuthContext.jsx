@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
           email: decoded.email,
           name: decoded.name,
           role: decoded.role,
+          distribution_channel: decoded.distribution_channel,
           isSuperuser: decoded.is_superuser === true || decoded.isSuperuser === true,
         });
       } catch {
@@ -66,10 +67,11 @@ export const AuthProvider = ({ children }) => {
         email: decodedUser.email,
         name: decodedUser.name,
         role: decodedUser.role,
+        distribution_channel: decodedUser.distribution_channel,
         isSuperuser: decodedUser.is_superuser === true || decodedUser.isSuperuser === true,
       });
-      // After login, go to company selection first
-      navigate('/select-company');
+      // After login, go to distribution channel selection first
+      navigate('/select-distribution-channel?forceSelect=true');
     } catch (error) {
       console.error('Login failed:', error.response?.data || error.message);
     }
@@ -80,7 +82,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('cdd_access_token');
     localStorage.removeItem('cdd_refresh_token');
     delete axiosInstance.defaults.headers['Authorization'];
-    navigate('/login');
+    navigate('/');
   };
 
   return (

@@ -30,11 +30,14 @@ def monthly_report(request):
 
     qs = Assessment.objects.filter(submitted_at__gte=start_dt, submitted_at__lt=end_dt)
     user = getattr(request, 'user', None)
-    if user and user.is_authenticated and not user.is_superuser:
-        company = getattr(request, 'company', None)
-        if not company:
-            return JsonResponse({'error': 'Company context required'}, status=403)
-        qs = qs.filter(client__company=company)
+    if user and user.is_authenticated:
+        # Admin and compliance can see all assessments
+        if user.role not in ['admin', 'compliance']:
+            # Regular users can only see assessments for clients from their distribution channel
+            if user.distribution_channel:
+                qs = qs.filter(client__distributionChannel=user.distribution_channel)
+            else:
+                return JsonResponse({'error': 'Distribution channel required'}, status=403)
 
     # Prefer DB-side grouping; if DB lacks timezone definitions, fallback to Python grouping
     try:
@@ -95,11 +98,14 @@ def yearly_report(request):
 
     qs = Assessment.objects.filter(submitted_at__gte=start_dt, submitted_at__lt=end_dt)
     user = getattr(request, 'user', None)
-    if user and user.is_authenticated and not user.is_superuser:
-        company = getattr(request, 'company', None)
-        if not company:
-            return JsonResponse({'error': 'Company context required'}, status=403)
-        qs = qs.filter(client__company=company)
+    if user and user.is_authenticated:
+        # Admin and compliance can see all assessments
+        if user.role not in ['admin', 'compliance']:
+            # Regular users can only see assessments for clients from their distribution channel
+            if user.distribution_channel:
+                qs = qs.filter(client__distributionChannel=user.distribution_channel)
+            else:
+                return JsonResponse({'error': 'Distribution channel required'}, status=403)
 
     try:
         data = (

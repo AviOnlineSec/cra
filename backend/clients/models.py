@@ -1,5 +1,7 @@
 from django.db import models
 from django.db.models import Max
+from django.utils import timezone
+import os
 
 class Client(models.Model):
     CLIENT_TYPE_CHOICES = (
@@ -8,7 +10,7 @@ class Client(models.Model):
     )
     DISTRIBUTION_CHANNEL_CHOICES = (
         ('HeadOffice', 'Head Office'),
-        ('Broker', 'Broker'),
+        ('Branch', 'Branch'),
         ('Agent', 'Agent'),
     )
 
@@ -27,7 +29,7 @@ class Client(models.Model):
     address = models.CharField(max_length=200, blank=True)
     city = models.CharField(max_length=100, blank=True)
     createdAt = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='clients', null=True, blank=True)
+    distribution_channel = models.ForeignKey('companies.DistributionChannel', on_delete=models.CASCADE, related_name='clients', null=True, blank=True)
     created_by = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_clients')
 
     def __str__(self):
@@ -53,3 +55,22 @@ class Client(models.Model):
             self.reference = f"{prefix}-{new_number}"
 
         super().save(*args, **kwargs)
+
+class KycDocument(models.Model):
+    client = models.ForeignKey('Client', on_delete=models.CASCADE, related_name='kyc_documents')
+    uploaded_by = models.ForeignKey('users.CustomUser', on_delete=models.SET_NULL, null=True, blank=True)
+    document = models.FileField(upload_to='kyc_docs/%Y/%m/%d/')
+    original_filename = models.CharField(max_length=255)
+    upload_date = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        # Save file under kyc_docs/<client_name>/<date>/filename.ext
+        client_name = self.client.fullName or self.client.corporateName or f"client_{self.client.id}"
+        date_str = self.upload_date.strftime('%Y-%m-%d')
+        base, ext = os.path.splitext(self.document.name)
+        new_path = f"kyc_docs/{client_name}/{date_str}/{os.path.basename(self.document.name)}"
+        self.document.name = new_path
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"KYC for {self.client} ({self.original_filename})"

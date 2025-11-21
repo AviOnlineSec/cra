@@ -59,7 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'companies.middleware.CompanyContextMiddleware',
+    'companies.middleware.DistributionChannelContextMiddleware',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -152,6 +152,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -159,8 +163,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 USERNAME_FIELD = 'email'
 
-
-# Optional external MySQL integration (disabled by default)
 EXTERNAL_DB = {
     "ENABLED": os.getenv("EXTERNAL_DB_ENABLED", "false").lower() == "true",
     "ENGINE": "mysql",

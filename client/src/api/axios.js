@@ -15,13 +15,13 @@ axiosInstance.interceptors.request.use(
     const accessToken = localStorage.getItem('cdd_access_token');
     if (accessToken) {
       config.headers['Authorization'] = `Bearer ${accessToken}`;
-      // Attach company header for non-superusers if selected
+      // Attach channel header for non-superusers if selected
       try {
         const decoded = jwtDecode(accessToken);
         const isSuperuser = decoded?.is_superuser === true || decoded?.isSuperuser === true;
-        const companyId = localStorage.getItem('cdd_company_id');
-        if (!isSuperuser && companyId) {
-          config.headers['X-Company-ID'] = companyId;
+        const channelId = localStorage.getItem('cdd_channel_id');
+        if (!isSuperuser && channelId) {
+          config.headers['X-Channel-ID'] = channelId;
         }
       } catch (_) {
         // ignore decode errors

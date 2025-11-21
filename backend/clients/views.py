@@ -1,8 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Client
-from .serializers import ClientSerializer
+from .models import Client, KycDocument
+from .serializers import ClientSerializer, KycDocumentSerializer
 from django.conf import settings
 from .external_db import (
     is_external_db_enabled,
@@ -19,23 +19,48 @@ class ClientViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        # Non-superusers are restricted to their selected company
-        if not user.is_superuser:
-            company = getattr(self.request, 'company', None)
-            if not company:
-                return Client.objects.none()
-            return qs.filter(company=company)
-        # Superusers can optionally filter by company via query param
-        company_id = self.request.query_params.get('company')
-        if company_id:
-            return qs.filter(company_id=company_id)
-        return qs
+        
+        # Admin and compliance can see all clients
+        if user.role in ['admin', 'compliance']:
+            return qs
+        
+        # Regular users can only see clients from their distribution channel
+        if user.distribution_channel:
+            return qs.filter(distributionChannel=user.distribution_channel)
+        
+        # If no distribution channel set, return empty queryset
+        return Client.objects.none()
 
     def perform_create(self, serializer):
         # Automatically set the creator to the authenticated user
-        company = getattr(self.request, 'company', None)
-        # For non-superusers company context is mandatory and set via middleware
-        serializer.save(created_by=self.request.user, company=company)
+        serializer.save(created_by=self.request.user)
+
+class KycDocumentViewSet(viewsets.ModelViewSet):
+    queryset = KycDocument.objects.all()
+    serializer_class = KycDocumentSerializer
+
+    def perform_create(self, serializer):
+        # Save original filename and uploader
+        file = self.request.FILES.get('document')
+        serializer.save(
+            uploaded_by=self.request.user,
+            original_filename=file.name if file else '',
+        )
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related('client')
+        user = self.request.user
+        
+        # Admin and compliance can see all KYC documents
+        if user.role in ['admin', 'compliance']:
+            return qs
+        
+        # Regular users can only see KYC documents for clients from their distribution channel
+        if user.distribution_channel:
+            return qs.filter(client__distributionChannel=user.distribution_channel)
+        
+        # If no distribution channel set, return empty queryset
+        return KycDocument.objects.none()
 
     @action(detail=False, methods=["get"], url_path="import-external")
     def import_external(self, request):
@@ -90,11 +115,8 @@ class ClientViewSet(viewsets.ModelViewSet):
                 else:
                     lookup = {"fullName": data["fullName"], "phone": data["phone"]}
 
-                # Always scope to the active company when importing
-                company = getattr(request, 'company', None)
-                if company:
-                    data["company"] = company.id
-                obj, created = Client.objects.get_or_create(company=company, **lookup, defaults=data)
+                # Create or update client
+                obj, created = Client.objects.get_or_create(**lookup, defaults=data)
                 if not created:
                     # Update existing with latest data
                     for k, v in data.items():
