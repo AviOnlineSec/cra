@@ -98,12 +98,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cdd_db',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
-        'PORT': '3306',
+
     }
 }
 
@@ -164,20 +159,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 USERNAME_FIELD = 'email'
 
 EXTERNAL_DB = {
-    "ENABLED": os.getenv("EXTERNAL_DB_ENABLED", "false").lower() == "true",
-    "ENGINE": "mysql",
-    "HOST": os.getenv("EXTERNAL_DB_HOST", ""),
-    "PORT": int(os.getenv("EXTERNAL_DB_PORT", "3306")),
-    "NAME": os.getenv("EXTERNAL_DB_NAME", ""),
-    "USER": os.getenv("EXTERNAL_DB_USER", ""),
-    "PASSWORD": os.getenv("EXTERNAL_DB_PASSWORD", ""),
-    # You can override this query via EXTERNAL_DB_CLIENTS_QUERY env var to match the other app's schema
-    "CLIENTS_QUERY": os.getenv(
-        "EXTERNAL_DB_CLIENTS_QUERY",
-        "SELECT full_name, national_id, email, phone, address, city, client_type, distribution_channel, corporate_name FROM clients LIMIT %s",
-    ),
-    # Destination table to push results into the other app's DB
-    "RESULTS_TABLE": os.getenv("EXTERNAL_DB_RESULTS_TABLE", "assessment_results"),
+
 }
 
 
